@@ -1,0 +1,115 @@
+.sidebar {
+  height: auto;
+  padding: 48px 32px;
+  background: #2f4664;
+  display: flex;
+  flex-direction: column;
+  color: #ffffff;
+  width: 280px;
+  flex-shrink: 0;
+  min-height: calc(100% + 24px);
+  box-sizing: border-box;
+}
+ 
+
+/* Logo / Title */
+.logo {
+  font-size: 22px;
+  margin-bottom: 40px;
+  color: #ffffff;
+}
+
+/* Steps list */
+.steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* Step item */
+.stepItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+/* Indicator column */
+.stepIndicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Step circle */
+.circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+
+/* Active step circle */
+.circle.active {
+  background: #ffffff;
+  color: #2f4664;
+  font-weight: 600;
+}
+
+/* Vertical line */
+.line {
+  width: 2px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.4);
+  margin-top: 4px;
+}
+
+/* Step label */
+.label {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7); /* ✅ still white, just softer */
+  margin-top: 4px;
+}
+
+/* Active label */
+.activeLabel {
+  color: #ffffff;
+  font-weight: 600;
+}
+.closeBtn {
+  display: none;
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .closeBtn {
+    display: block;
+  }
+   
+}
+.completed {
+  background: #22c55e; /* green */
+  color: white;
+}
+
+.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.lock {
+  margin-left: 6px;
+  font-size: 12px;
+}
