@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createKRA, deleteKRA, getAllAppraisals, getDepartments, getMyAppraisals, patchAppraisal, patchKRA } from '../api/appraisalApi';
 import { APPRAISAL_TYPE_OPTIONS, APPRAISER_FIELD_OPTIONS, DEFAULT_FRAME_CONFIG, FRAME_STEP_OPTIONS, normalizeFrameConfig } from '../utils/frameConfig';
 import { getFinalMark, getOverallPerformance } from '../utils/ratingUtils';
@@ -44,6 +44,61 @@ const EXPORT_FIELD_OPTIONS = [
   { key: 'performance_ratings', label: 'Performance Ratings' },
 ];
 
+function NavIcon({ icon }) {
+  switch (icon) {
+    case 'dashboard':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 4h7v7H4V4Zm9 0h7v4h-7V4ZM4 13h4v7H4v-7Zm6 0h10v7H10v-7Z" fill="currentColor" />
+        </svg>
+      );
+    case 'layers':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="m12 3 8 4.5-8 4.5-8-4.5L12 3Zm-8 8.5L12 16l8-4.5M4 16.5 12 21l8-4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    case 'download':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 4v10m0 0 4-4m-4 4-4-4M5 19h14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    case 'users':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm6 1a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM4.5 19a4.5 4.5 0 0 1 9 0m1.5 0a3.5 3.5 0 0 1 5 0" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    case 'building':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5 20V6l7-3 7 3v14M9 9h1m4 0h1M9 13h1m4 0h1M11 20v-3h2v3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    case 'note':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M7 4h7l5 5v11H7V4Zm7 0v5h5M9 13h6M9 17h6M9 9h2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    case 'spark':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3 9.8 9.8 3 12l6.8 2.2L12 21l2.2-6.8L21 12l-6.8-2.2L12 3Z" fill="currentColor" />
+        </svg>
+      );
+    case 'target':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 6v2m0 8v2m4-6h2M6 12H4m8-6a6 6 0 1 1 0 12 6 6 0 0 1 0-12Zm0 4a2 2 0 1 1 0 4 2 2 0 0 1 0-4Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
+
 function sanitizeSheetName(value, index) {
   const cleaned = String(value || `Staff ${index + 1}`)
     .replace(/[\\/?*\[\]:]/g, ' ')
@@ -80,6 +135,7 @@ export default function AppraisalListPage({
   selectedAppraisalIds = [],
   setSelectedAppraisalIds,
 }) {
+  const hrMainRef = useRef(null);
   const [appraisals, setAppraisals] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [selectedDepartment, setSelectedDepartment] = useState('all');
@@ -120,6 +176,7 @@ export default function AppraisalListPage({
   const isHR = employee?.role === 'hr';
   const isReviewer = employee?.role === 'reviewer';
   const isAppraiser = employee?.role === 'appraiser';
+  const isRoleShell = isHR || isReviewer || isAppraiser;
   const showDepartmentFilter = isHR || isReviewer || isAppraiser;
 
   useEffect(() => {
@@ -1094,107 +1151,473 @@ export default function AppraisalListPage({
     }
   };
 
-  return (
-    <div className={styles.page}>
-      <div className={styles.header}>
-        <h2>Appraisals — {employee.name} ({ROLE_LABEL[employee.role] || employee.role})</h2>
-        <div className={styles.headerActions}>
-          <div className={styles.filterGroup}>
-            <label htmlFor="nameSearch" className={styles.filterLabel}>Name</label>
-            <input
-              id="nameSearch"
-              type="text"
-              className={styles.filterSelect}
-              placeholder="Search by name…"
-              value={nameSearch}
-              onChange={(e) => setNameSearch(e.target.value)}
-            />
-          </div>
-          {showDepartmentFilter && (
-            <div className={styles.filterGroup}>
-              <label htmlFor="departmentFilter" className={styles.filterLabel}>Department</label>
-              <select
-                id="departmentFilter"
-                className={styles.filterSelect}
-                value={selectedDepartment}
-                onChange={(e) => setSelectedDepartment(e.target.value)}
+  const handleOpenLatestMyKra = () => {
+    getMyAppraisals().then((list) => {
+      if (list.length > 0) {
+        const latest = [...list].sort((a, b) => {
+          const aPeriod = a?.period_to ? new Date(a.period_to).getTime() : 0;
+          const bPeriod = b?.period_to ? new Date(b.period_to).getTime() : 0;
+          if (bPeriod !== aPeriod) return bPeriod - aPeriod;
+          const aUpdated = a?.updated_at ? new Date(a.updated_at).getTime() : 0;
+          const bUpdated = b?.updated_at ? new Date(b.updated_at).getTime() : 0;
+          return bUpdated - aUpdated;
+        })[0];
+        onOpenMyKra(latest.id);
+      } else {
+        alert('No appraisal assigned to you yet.');
+      }
+    }).catch(() => alert('Failed to load your appraisal.'));
+  };
+
+  const hrDashboardStats = [
+    {
+      key: 'staff',
+      label: 'Visible Staff',
+      value: displayAppraisals.length,
+      note: `${appraisals.length} total appraisal records`,
+      accent: styles.statCardSky,
+    },
+    {
+      key: 'drafts',
+      label: 'Drafts',
+      value: appraisals.filter((appraisal) => `${appraisal.status || ''}`.toLowerCase() === 'draft').length,
+      note: 'Pending staff or appraiser action',
+      accent: styles.statCardSun,
+    },
+    {
+      key: 'departments',
+      label: 'Departments',
+      value: availableDepartments.length,
+      note: 'Available in this view',
+      accent: styles.statCardMint,
+    },
+    {
+      key: 'ratings',
+      label: 'Rating Access',
+      value: appraisals.filter((appraisal) => Boolean(appraisal.mark_entry_access_open)).length,
+      note: markSectionVisible ? 'Rating section is open' : 'Rating section is hidden',
+      accent: styles.statCardCoral,
+    },
+  ];
+
+  const appraisalCards = (
+    <div className={`${styles.grid} ${isHR ? styles.hrGrid : ''}`}>
+      {displayAppraisals.map((a) => (
+        <div
+          className={`${styles.card} ${isHR ? styles.hrCard : ''}`}
+          key={a.id}
+          onClick={() => onSelect(a.id)}
+        >
+          <h3>{a.employee_name || `Employee #${a.employee}`}</h3>
+          <p>Department: {a.employee_department || '—'}</p>
+          <p>Employee ID: {a.employee_emp_id || '—'}</p>
+          {a.recordCount > 1 && (
+            <p className={styles.helperText}>Showing latest appraisal • {a.recordCount} records</p>
+          )}
+          <div className={styles.cardMetaRow}>
+            <span className={`${styles.badge} ${BADGE_CLASS[a.status] || ''}`}>
+              {a.status}
+            </span>
+            {isHR && (
+              <span
+                className={`${styles.ratingVisibilityPill} ${
+                  a.mark_entry_access_open ? styles.ratingVisiblePill : styles.ratingHiddenPill
+                }`}
               >
-                <option value="all">All Departments</option>
-                {availableDepartments.map((dept) => (
-                  <option key={dept.id} value={dept.name}>
-                    {dept.name}
-                  </option>
-                ))}
-              </select>
+                Rating {a.mark_entry_access_open ? 'Shown' : 'Hidden'}
+              </span>
+            )}
+          </div>
+
+          {(isHR || isAppraiser) && (
+            <div className={styles.cardActions}>
+              {isHR && (
+                <button
+                  className={styles.editBtn}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openEditModal(a);
+                  }}
+                >
+                  Edit Details
+                </button>
+              )}
+              {isAppraiser && (
+                <button
+                  className={styles.editBtn}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openEditModal(a);
+                  }}
+                >
+                  Add Content
+                </button>
+              )}
             </div>
           )}
-          {isHR && (
-            <button
-              className={styles.navBtn}
-              onClick={handleOpenRatingModal}
-              disabled={loading || accessUpdating || appraisals.length === 0}
-            >
-              Handle Rating
-            </button>
-          )}
-          {isHR && (
-            <button className={styles.navBtn} onClick={() => onNavigate('downloads')}>
-              Download Page
-            </button>
-          )}
-          {isHR && (
-            <button className={styles.navBtn} onClick={() => onNavigate('employees')}>
-              Employees
-            </button>
-          )}
-          {isHR && (
-            <button className={styles.navBtn} onClick={() => onNavigate('departments')}>
-              Departments
-            </button>
-          )}
-          {isHR && (
-            <button className={styles.navBtn} onClick={() => onNavigate('memos')}>
-              Memos
-            </button>
-          )}
-          {isHR && (
-            <button className={styles.navBtn} onClick={() => onNavigate('structure')}>
-              KRA Structure
-            </button>
-          )}
-          {(employee?.role === 'appraiser' || employee?.role === 'reviewer' || employee?.role === 'hr') && onOpenMyKra && (
-            <button
-              className={styles.navBtn}
-              style={{ background: '#f0fdf4', color: '#15803d', border: '1.5px solid #86efac' }}
-              onClick={() => {
-                getMyAppraisals().then((list) => {
-                  if (list.length > 0) {
-                    const latest = [...list].sort((a, b) => {
-                      const aPeriod = a?.period_to ? new Date(a.period_to).getTime() : 0;
-                      const bPeriod = b?.period_to ? new Date(b.period_to).getTime() : 0;
-                      if (bPeriod !== aPeriod) return bPeriod - aPeriod;
-                      const aUpdated = a?.updated_at ? new Date(a.updated_at).getTime() : 0;
-                      const bUpdated = b?.updated_at ? new Date(b.updated_at).getTime() : 0;
-                      return bUpdated - aUpdated;
-                    })[0];
-                    onOpenMyKra(latest.id);
-                  }
-                  else alert('No appraisal assigned to you yet.');
-                }).catch(() => alert('Failed to load your appraisal.'));
-              }}
-            >
-              📄 My KRA
-            </button>
-          )}
-          <button className={styles.logoutBtn} onClick={onLogout}>Logout</button>
         </div>
-      </div>
+      ))}
+    </div>
+  );
+
+  const handleScrollTop = () => {
+    if (isRoleShell && hrMainRef.current) {
+      hrMainRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  return (
+    <div className={`${styles.page} ${isRoleShell ? styles.hrPage : ''}`}>
+      {isHR ? (
+        <div className={styles.hrShell}>
+          <aside className={styles.hrSidebar}>
+            <div className={styles.hrBrandBlock}>
+              <span className={styles.hrBrandOrb} aria-hidden="true" />
+              <span className={styles.hrBrandEyebrow}>KRA ADMIN</span>
+              <strong className={styles.hrBrandTitle}>HR Dashboard</strong>
+            </div>
+
+            <div className={styles.hrSidebarNav}>
+              <div className={styles.hrNavSection}>
+                <span className={styles.hrNavSectionLabel}>Workspace</span>
+                <button type="button" className={`${styles.hrSidebarBtn} ${styles.hrSidebarBtnActive}`}>
+                  <span className={styles.hrSidebarBtnContent}>
+                    <span className={styles.hrSidebarBtnIcon} aria-hidden="true">
+                      <NavIcon icon="dashboard" />
+                    </span>
+                    <span>Dashboard</span>
+                  </span>
+                </button>
+                <button type="button" className={styles.hrSidebarBtn} onClick={() => onNavigate('structure')}>
+                  <span className={styles.hrSidebarBtnContent}>
+                    <span className={styles.hrSidebarBtnIcon} aria-hidden="true">
+                      <NavIcon icon="layers" />
+                    </span>
+                    <span>KRA Structure</span>
+                  </span>
+                </button>
+              </div>
+
+              <div className={styles.hrNavSection}>
+                <span className={styles.hrNavSectionLabel}>Management</span>
+                <button type="button" className={styles.hrSidebarBtn} onClick={() => onNavigate('downloads')}>
+                  <span className={styles.hrSidebarBtnContent}>
+                    <span className={styles.hrSidebarBtnIcon} aria-hidden="true">
+                      <NavIcon icon="download" />
+                    </span>
+                    <span>Download KRA</span>
+                  </span>
+                </button>
+                <button type="button" className={styles.hrSidebarBtn} onClick={() => onNavigate('employees')}>
+                  <span className={styles.hrSidebarBtnContent}>
+                    <span className={styles.hrSidebarBtnIcon} aria-hidden="true">
+                      <NavIcon icon="users" />
+                    </span>
+                    <span>Employees</span>
+                  </span>
+                </button>
+                <button type="button" className={styles.hrSidebarBtn} onClick={() => onNavigate('departments')}>
+                  <span className={styles.hrSidebarBtnContent}>
+                    <span className={styles.hrSidebarBtnIcon} aria-hidden="true">
+                      <NavIcon icon="building" />
+                    </span>
+                    <span>Departments</span>
+                  </span>
+                </button>
+                <button type="button" className={styles.hrSidebarBtn} onClick={() => onNavigate('memos')}>
+                  <span className={styles.hrSidebarBtnContent}>
+                    <span className={styles.hrSidebarBtnIcon} aria-hidden="true">
+                      <NavIcon icon="note" />
+                    </span>
+                    <span>Memos</span>
+                  </span>
+                </button>
+              </div>
+
+              {onOpenMyKra && (
+                <div className={styles.hrNavSection}>
+                  <span className={styles.hrNavSectionLabel}>Quick Access</span>
+                  <button type="button" className={styles.hrSidebarBtn} onClick={handleOpenLatestMyKra}>
+                    <span className={styles.hrSidebarBtnContent}>
+                      <span className={styles.hrSidebarBtnIcon} aria-hidden="true">
+                        <NavIcon icon="target" />
+                      </span>
+                      <span>My KRA</span>
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className={styles.hrSidebarFooter}>
+              <span className={styles.hrSidebarUser}>Logged in as {employee.name}</span>
+              <button type="button" className={styles.hrSidebarLogoutBtn} onClick={onLogout}>
+                Logout
+              </button>
+            </div>
+
+          </aside>
+
+          <div className={styles.hrMain} ref={hrMainRef}>
+            <div className={styles.hrTopbar}>
+              <div>
+                <div className={styles.hrEyebrow}>CONTROL CENTER</div>
+                <h2 className={styles.hrTitle}>Appraisals Dashboard</h2>
+                <p className={styles.hrSubtext}>
+                  Review staff progress, manage structure updates, and control appraisal access from a single workspace.
+                </p>
+              </div>
+              {isHR && (
+                <button
+                  type="button"
+                  className={styles.handleRatingBtn}
+                  onClick={handleOpenRatingModal}
+                >
+                  Manage Ratings
+                </button>
+              )}
+            </div>
+
+            {!loading && !error && (
+              <div className={styles.hrStatsGrid}>
+                {hrDashboardStats.map((stat) => (
+                  <div key={stat.key} className={`${styles.statCard} ${stat.accent}`}>
+                    <span className={styles.statLabel}>{stat.label}</span>
+                    <strong className={styles.statValue}>{stat.value}</strong>
+                    <span className={styles.statNote}>{stat.note}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {error && <div className={styles.error}>{error}</div>}
+            {loading && <div className={styles.loading}>Loading appraisals…</div>}
+
+            {!loading && !error && displayAppraisals.length === 0 && (
+              <div className={styles.empty}>
+                {selectedDepartment === 'all'
+                  ? 'No appraisals found.'
+                  : 'No staff found for the selected department.'}
+              </div>
+            )}
+
+            <div className={styles.hrToolbar}>
+              {showDepartmentFilter && (
+                <div className={`${styles.filterGroup} ${styles.hrToolbarCard} ${styles.hrToolbarFilterLeft}`}>
+                  <label htmlFor="departmentFilter" className={styles.srOnly}>Department</label>
+                  <select
+                    id="departmentFilter"
+                    className={styles.filterSelect}
+                    value={selectedDepartment}
+                    onChange={(e) => setSelectedDepartment(e.target.value)}
+                  >
+                    <option value="all">All Departments</option>
+                    {availableDepartments.map((dept) => (
+                      <option key={dept.id} value={dept.name}>
+                        {dept.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div className={`${styles.filterGroup} ${styles.hrToolbarCard} ${styles.hrToolbarSearch}`}> 
+                <label htmlFor="nameSearch" className={styles.srOnly}>Search by name</label>
+                <span className={styles.filterIcon} aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="m21 21-4.35-4.35M10.8 18a7.2 7.2 0 1 1 0-14.4 7.2 7.2 0 0 1 0 14.4Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+                <input
+                  id="nameSearch"
+                  type="text"
+                  className={styles.filterSelect}
+                  placeholder="Search by name..."
+                  value={nameSearch}
+                  onChange={(e) => setNameSearch(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <section className={styles.hrContentPanel}>
+              <div className={styles.hrSectionHead}>
+                <div>
+                  <h3>Staff Appraisals</h3>
+                  <p>Latest appraisal card for each employee in the selected view.</p>
+                </div>
+                <span className={styles.hrSectionPill}>{displayAppraisals.length} live records</span>
+              </div>
+              {appraisalCards}
+            </section>
+          </div>
+        </div>
+      ) : isRoleShell ? (
+        <div className={styles.hrShell}>
+          <aside className={styles.hrSidebar}>
+            <div className={styles.hrBrandBlock}>
+              <span className={styles.hrBrandOrb} aria-hidden="true" />
+              <span className={styles.hrBrandEyebrow}>KRA WORKSPACE</span>
+              <strong className={styles.hrBrandTitle}>{ROLE_LABEL[employee.role] || employee.role} Dashboard</strong>
+            </div>
+
+            <div className={styles.hrSidebarNav}>
+              <div className={styles.hrNavSection}>
+                <span className={styles.hrNavSectionLabel}>Workspace</span>
+                <button type="button" className={`${styles.hrSidebarBtn} ${styles.hrSidebarBtnActive}`}>
+                  Dashboard
+                </button>
+                {onOpenMyKra && (
+                  <button type="button" className={styles.hrSidebarBtn} onClick={handleOpenLatestMyKra}>
+                    My KRA
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className={styles.hrSidebarFooter}>
+              <span className={styles.hrSidebarUser}>Logged in as {employee.name}</span>
+              <button type="button" className={styles.hrSidebarLogoutBtn} onClick={onLogout}>
+                Logout
+              </button>
+            </div>
+          </aside>
+
+          <div className={styles.hrMain} ref={hrMainRef}>
+            <div className={styles.hrTopbar}>
+              <div>
+                <div className={styles.hrEyebrow}>CONTROL CENTER</div>
+                <h2 className={styles.hrTitle}>Appraisals Dashboard</h2>
+                <p className={styles.hrSubtext}>
+                  Review your assigned staff appraisals, filter by team, and open the latest records for updates.
+                </p>
+              </div>
+            </div>
+
+            <div className={styles.hrToolbar}>
+              <div className={`${styles.filterGroup} ${styles.hrToolbarCard}`}>
+                <label htmlFor="nameSearch" className={styles.filterLabel}>Search</label>
+                <input
+                  id="nameSearch"
+                  type="text"
+                  className={styles.filterSelect}
+                  placeholder="Search by name…"
+                  value={nameSearch}
+                  onChange={(e) => setNameSearch(e.target.value)}
+                />
+              </div>
+              {showDepartmentFilter && (
+                <div className={`${styles.filterGroup} ${styles.hrToolbarCard}`}>
+                  <label htmlFor="departmentFilter" className={styles.filterLabel}>Department</label>
+                  <select
+                    id="departmentFilter"
+                    className={styles.filterSelect}
+                    value={selectedDepartment}
+                    onChange={(e) => setSelectedDepartment(e.target.value)}
+                  >
+                    <option value="all">All Departments</option>
+                    {availableDepartments.map((dept) => (
+                      <option key={dept.id} value={dept.name}>
+                        {dept.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {error && <div className={styles.error}>{error}</div>}
+            {loading && <div className={styles.loading}>Loading appraisals…</div>}
+
+            {!loading && !error && displayAppraisals.length === 0 && (
+              <div className={styles.empty}>
+                {selectedDepartment === 'all'
+                  ? 'No appraisals found.'
+                  : 'No staff found for the selected department.'}
+              </div>
+            )}
+
+            <section className={styles.hrContentPanel}>
+              <div className={styles.hrSectionHead}>
+                <div>
+                  <h3>Assigned Appraisals</h3>
+                  <p>Latest appraisal card for each employee in your current view.</p>
+                </div>
+                <span className={styles.hrSectionPill}>{displayAppraisals.length} live records</span>
+              </div>
+              {appraisalCards}
+            </section>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className={styles.header}>
+            <h2>Appraisals — {employee.name} ({ROLE_LABEL[employee.role] || employee.role})</h2>
+            <div className={styles.headerActions}>
+              <div className={styles.filterGroup}>
+                <label htmlFor="nameSearch" className={styles.filterLabel}>Name</label>
+                <input
+                  id="nameSearch"
+                  type="text"
+                  className={styles.filterSelect}
+                  placeholder="Search by name…"
+                  value={nameSearch}
+                  onChange={(e) => setNameSearch(e.target.value)}
+                />
+              </div>
+              {showDepartmentFilter && (
+                <div className={styles.filterGroup}>
+                  <label htmlFor="departmentFilter" className={styles.filterLabel}>Department</label>
+                  <select
+                    id="departmentFilter"
+                    className={styles.filterSelect}
+                    value={selectedDepartment}
+                    onChange={(e) => setSelectedDepartment(e.target.value)}
+                  >
+                    <option value="all">All Departments</option>
+                    {availableDepartments.map((dept) => (
+                      <option key={dept.id} value={dept.name}>
+                        {dept.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {(employee?.role === 'appraiser' || employee?.role === 'reviewer' || employee?.role === 'hr') && onOpenMyKra && (
+                <button
+                  className={styles.navBtn}
+                  style={{ background: '#f0fdf4', color: '#15803d', border: '1.5px solid #86efac' }}
+                  onClick={handleOpenLatestMyKra}
+                >
+                  📄 My KRA
+                </button>
+              )}
+              <button className={styles.logoutBtn} onClick={onLogout}>Logout</button>
+            </div>
+          </div>
+
+          {ratingBanner}
+          {error && <div className={styles.error}>{error}</div>}
+          {loading && <div className={styles.loading}>Loading appraisals…</div>}
+
+          {!loading && !error && displayAppraisals.length === 0 && (
+            <div className={styles.empty}>
+              {selectedDepartment === 'all'
+                ? 'No appraisals found.'
+                : 'No staff found for the selected department.'}
+            </div>
+          )}
+
+          {appraisalCards}
+        </>
+      )}
 
       {isHR && ratingModalOpen && (
         <div className={styles.overlay} onClick={() => setRatingModalOpen(false)}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
-              <h3>Handle Rating</h3>
+              <h3>Manage Ratings</h3>
               <button className={styles.modalClose} onClick={() => setRatingModalOpen(false)}>×</button>
             </div>
             <p className={styles.modalSub}>
@@ -1333,79 +1756,11 @@ export default function AppraisalListPage({
         </div>
       )}
 
-      {isHR && !loading && !error && (
-        <div
-          className={`${styles.infoBanner} ${
-            (ratingBannerState ?? markSectionVisible) ? styles.infoVisible : styles.infoHidden
-          }`}
-        >
-          {ratingBannerMessage || `Rating section is currently ${markSectionVisible ? 'visible' : 'hidden'} for appraisals.`}
-        </div>
-      )}
-
-      {error && <div className={styles.error}>{error}</div>}
-      {loading && <div className={styles.loading}>Loading appraisals…</div>}
-
-      {!loading && !error && displayAppraisals.length === 0 && (
-        <div className={styles.empty}>
-          {selectedDepartment === 'all'
-            ? 'No appraisals found.'
-            : 'No staff found for the selected department.'}
-        </div>
-      )}
-
-      <div className={styles.grid}>
-        {displayAppraisals.map((a) => (
-          <div
-            className={styles.card}
-            key={a.id}
-            onClick={() => onSelect(a.id)}
-          >
-            <h3>{a.employee_name || `Employee #${a.employee}`}</h3>
-            <p>Department: {a.employee_department || '—'}</p>
-            <p>Employee ID: {a.employee_emp_id || '—'}</p>
-            {a.recordCount > 1 && (
-              <p className={styles.helperText}>Showing latest appraisal • {a.recordCount} records</p>
-            )}
-            <span className={`${styles.badge} ${BADGE_CLASS[a.status] || ''}`}>
-              {a.status}
-            </span>
-
-            {(isHR || isAppraiser) && (
-              <div className={styles.cardActions}>
-                {isHR && (
-                  <button
-                    className={styles.editBtn}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openEditModal(a);
-                    }}
-                  >
-                    Edit Details
-                  </button>
-                )}
-                {isAppraiser && (
-                  <button
-                    className={styles.editBtn}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openEditModal(a);
-                    }}
-                  >
-                    Add Content
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-
       <button
         type="button"
         className={styles.scrollTopBtn}
         title="Back to top"
-        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        onClick={handleScrollTop}
       >
         ↑
       </button>

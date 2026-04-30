@@ -23,7 +23,7 @@ const EMPTY_FORM = {
   reviewer: null,
 };
 
-export default function EmployeesPage({ employee, onBack }) {
+export default function EmployeesPage({ employee, onBack, embeddedInShell = false }) {
   const formRef = useRef(null);
   const firstNameInputRef = useRef(null);
   const [employees, setEmployees] = useState([]);
@@ -308,29 +308,14 @@ export default function EmployeesPage({ employee, onBack }) {
     XLSX.writeFile(workbook, 'employee_import_template.xlsx');
   };
 
-  return (
-    <div className={styles.page}>
-      <div className={styles.header}>
-        <button className={styles.backBtn} onClick={onBack}>← Back</button>
-        <h2>Employees</h2>
-        {canManage && (
-          <button
-            className={styles.addBtn}
-            onClick={() => {
-              if (showForm) {
-                resetFormState();
-              } else {
-                setEditingId(null);
-                setForm(EMPTY_FORM);
-                setSaveError('');
-                setShowForm(true);
-              }
-            }}
-          >
-            {showForm ? 'Cancel' : '+ Add Employee'}
-          </button>
-        )}
-      </div>
+  const content = (
+    <>
+      {!embeddedInShell && (
+        <div className={styles.header}>
+          <button className={styles.backBtn} onClick={onBack}>← Back</button>
+          <h2>Employees</h2>
+        </div>
+      )}
 
       {isHR && (
         <section className={styles.importPanel}>
@@ -464,6 +449,7 @@ export default function EmployeesPage({ employee, onBack }) {
                 ))}
               </select>
             </div>
+
             <div className={styles.field}>
               <label>Appraiser</label>
               <select name="appraiser" value={form.appraiser || ''} onChange={handleChange}>
@@ -507,9 +493,19 @@ export default function EmployeesPage({ employee, onBack }) {
 
           {saveError && <div className={styles.saveError}>{saveError}</div>}
 
-          <button className={styles.submitBtn} type="submit" disabled={saving}>
-            {saving ? 'Saving…' : editingId ? 'Update Employee' : 'Create Employee'}
-          </button>
+          <div className={styles.formActions}>
+            <button className={styles.submitBtn} type="submit" disabled={saving}>
+              {saving ? 'Saving…' : editingId ? 'Update Employee' : 'Create Employee'}
+            </button>
+            <button 
+              type="button" 
+              className={styles.cancelBtn} 
+              onClick={resetFormState}
+              disabled={saving}
+            >
+              Cancel
+            </button>
+          </div>
         </form>
       )}
 
@@ -520,27 +516,46 @@ export default function EmployeesPage({ employee, onBack }) {
         <div className={styles.empty}>No employees found.</div>
       )}
 
-      <div style={{ padding: '0.5rem 0 0.75rem 0', maxWidth: 340 }}>
-        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4a5568', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          🔍 Search by Name
-        </label>
-        <input
-          type="text"
-          placeholder="Type a name to filter…"
-          value={nameSearch}
-          onChange={(e) => setNameSearch(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '8px 12px',
-            borderRadius: '8px',
-            border: '2px solid #667eea',
-            fontSize: '0.875rem',
-            boxSizing: 'border-box',
-            background: '#f7f8ff',
-            color: '#2d3748',
-            boxShadow: '0 1px 4px rgba(102,126,234,0.15)',
-          }}
-        />
+      <div className={styles.searchSection}>
+        <div className={styles.searchField}>
+          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4a5568', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            🔍 Search by Name
+          </label>
+          <input
+            type="text"
+            placeholder="Type a name to filter…"
+            value={nameSearch}
+            onChange={(e) => setNameSearch(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              borderRadius: '8px',
+              border: '2px solid #667eea',
+              fontSize: '0.875rem',
+              boxSizing: 'border-box',
+              background: '#f7f8ff',
+              color: '#2d3748',
+              boxShadow: '0 1px 4px rgba(102,126,234,0.15)',
+            }}
+          />
+        </div>
+        {canManage && (
+          <button
+            className={styles.addBtn}
+            onClick={() => {
+              if (showForm) {
+                resetFormState();
+              } else {
+                setEditingId(null);
+                setForm(EMPTY_FORM);
+                setSaveError('');
+                setShowForm(true);
+              }
+            }}
+          >
+            {showForm ? 'Cancel' : '+ Add Employee'}
+          </button>
+        )}
       </div>
 
       <div className={styles.tableWrap}>
@@ -659,6 +674,8 @@ export default function EmployeesPage({ employee, onBack }) {
           </table>
         )}
       </div>
-    </div>
+    </>
   );
+
+  return embeddedInShell ? content : <div className={styles.page}>{content}</div>;
 }

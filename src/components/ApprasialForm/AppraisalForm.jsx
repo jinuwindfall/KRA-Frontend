@@ -295,10 +295,6 @@ const AppraisalForm = ({ appraisalId, employee, onBack, viewAsRole }) => {
           <button className={styles.topBackBtn} onClick={onBack}>← Back</button>
         )}
         <span className={styles.topTitle}>Performance Appraisal</span>
-        <div className={styles.topRight}>
-          <span className={styles.topUser}>{employee?.name || employee?.emp_id}</span>
-          <button className={styles.logoutBtn} onClick={handleLogout}>Logout</button>
-        </div>
       </div>
 
       {/* Mobile Header */}
@@ -308,7 +304,6 @@ const AppraisalForm = ({ appraisalId, employee, onBack, viewAsRole }) => {
         )}
         <button className={styles.menuBtn} onClick={() => setSidebarOpen(true)}>☰</button>
         <span>Performance Appraisal</span>
-        <button className={styles.logoutBtn} onClick={handleLogout} style={{marginLeft:'auto'}}>Logout</button>
       </div>
 
       <div className={styles.wrapper}>
@@ -318,6 +313,8 @@ const AppraisalForm = ({ appraisalId, employee, onBack, viewAsRole }) => {
             steps={steps}
             currentStep={currentStep}
             completedSteps={completedSteps}
+            userName={employee?.name || employee?.emp_id}
+            onLogout={handleLogout}
             onStepClick={(index) => {
               const maxAllowed = Math.max(...completedSteps, currentStep);
               if (index <= maxAllowed) {

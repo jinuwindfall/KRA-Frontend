@@ -4,6 +4,463 @@
   background: #f4f6fa;
 }
 
+.hrPage {
+  height: 100vh;
+  padding: 1.4rem;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top left, rgba(125, 211, 252, 0.35), transparent 28%),
+    linear-gradient(135deg, #77b4d4 0%, #2f8292 100%);
+}
+
+@media (max-width: 1080px) {
+  .hrShell {
+    grid-template-columns: 1fr;
+  }
+
+  .hrStatsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .hrPage {
+    padding: 0.75rem;
+  }
+
+  .hrMain {
+    padding: 1rem;
+  }
+
+  .hrTopbar {
+    flex-direction: column;
+  }
+
+  .hrStatsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .scrollTopBtn {
+    right: 0.8rem;
+    bottom: 0.8rem;
+  }
+}
+.hrShell {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  height: calc(100vh - 2.8rem);
+  border-radius: 24px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(240, 245, 255, 0.92), rgba(229, 239, 251, 0.88));
+  box-shadow: 0 28px 60px rgba(15, 23, 42, 0.22);
+}
+
+.hrSidebar {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100%;
+  background: linear-gradient(180deg, #203041 0%, #2c4153 58%, #31495c 100%);
+  color: #f8fafc;
+  padding: 1.6rem 0.95rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.hrBrandBlock {
+  position: relative;
+  padding: 0.25rem 0.45rem 0.85rem;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.16);
+  display: grid;
+  gap: 0.22rem;
+}
+
+.hrBrandOrb {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #67e8f9, #fde68a);
+  box-shadow: 0 0 0 4px rgba(103, 232, 249, 0.12);
+}
+
+.hrBrandEyebrow {
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  color: rgba(226, 232, 240, 0.72);
+}
+
+.hrBrandTitle {
+  font-size: 1.15rem;
+  letter-spacing: 0.03em;
+}
+
+.hrBrandMeta {
+  font-size: 0.84rem;
+  color: rgba(226, 232, 240, 0.72);
+}
+
+.hrSidebarNav {
+  display: grid;
+  gap: 0.8rem;
+  flex: 1;
+  min-height: 0;
+  align-content: start;
+}
+
+.hrSidebarFooter {
+  margin-top: auto;
+  padding: 0.7rem 0.45rem 0;
+  border-top: 1px solid rgba(226, 232, 240, 0.16);
+  display: grid;
+  gap: 0.55rem;
+}
+
+.hrSidebarUser {
+  font-size: 0.8rem;
+  color: rgba(226, 232, 240, 0.8);
+}
+
+.hrNavSection {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.hrNavSectionLabel {
+  padding: 0 0.3rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.55);
+  font-weight: 700;
+}
+
+.hrSidebarBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+  border: 1px solid transparent;
+  background: transparent;
+  color: rgba(241, 245, 249, 0.86);
+  padding: 0.72rem 0.8rem;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 0.92rem;
+  font-weight: 600;
+  transition: background 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
+}
+
+.hrSidebarBtnContent {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.hrSidebarBtnIcon {
+  width: 1rem;
+  height: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(191, 219, 254, 0.96);
+  flex-shrink: 0;
+}
+
+.hrSidebarBtnIcon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.hrSidebarBtnArrow {
+  width: 0.95rem;
+  height: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(191, 219, 254, 0.92);
+  flex-shrink: 0;
+}
+
+.hrSidebarBtnArrow svg {
+  width: 100%;
+  height: 100%;
+}
+
+.hrSidebarBtn:hover,
+.hrSidebarBtnActive {
+  background: rgba(148, 163, 184, 0.18);
+  border-color: rgba(191, 219, 254, 0.24);
+  transform: translateX(2px);
+}
+
+.hrSidebarBtnActive {
+  color: #ffffff;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.24), rgba(96, 165, 250, 0.22));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.hrSidebarBtnActive .hrSidebarBtnIcon,
+.hrSidebarBtnActive .hrSidebarBtnArrow,
+.hrSidebarBtn:hover .hrSidebarBtnIcon {
+  color: #ffffff;
+}
+
+.hrSidebarBtn:hover .hrSidebarBtnArrow {
+  color: #ffffff;
+}
+
+.hrSidebarSubmenu {
+  margin: -0.05rem 0 0.15rem;
+  padding-left: 1.2rem;
+}
+
+.hrSidebarSubmenuBtn {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: rgba(148, 163, 184, 0.1);
+  color: rgba(226, 232, 240, 0.88);
+  padding: 0.58rem 0.75rem;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.86rem;
+  font-weight: 600;
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+
+.hrSidebarSubmenuBtn:hover {
+  background: rgba(148, 163, 184, 0.18);
+  transform: translateX(2px);
+}
+
+.hrSidebarSubmenuBtn .hrSidebarBtnIcon {
+  width: 0.9rem;
+  height: 0.9rem;
+  color: rgba(125, 211, 252, 0.96);
+}
+
+.hrMain {
+  height: calc(100vh - 2.8rem);
+  padding: 1.7rem;
+  display: grid;
+  align-content: start;
+  gap: 1.1rem;
+  background: linear-gradient(180deg, rgba(244, 247, 255, 0.82) 0%, rgba(233, 240, 250, 0.92) 100%);
+  overflow-y: auto;
+}
+
+.hrTopbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+}
+
+.hrEyebrow {
+  font-size: 0.75rem;
+  letter-spacing: 0.18em;
+  color: #64748b;
+  font-weight: 700;
+  margin-bottom: 0.45rem;
+}
+
+.hrTitle {
+  margin: 0;
+  font-size: 2rem;
+  color: #1e293b;
+}
+
+.hrSubtext {
+  margin: 0.5rem 0 0;
+  width: 100%;
+  max-width: none;
+  color: #64748b;
+  line-height: 1.55;
+}
+
+.hrTopbarActions {
+  min-width: 190px;
+  display: grid;
+  justify-items: end;
+  gap: 0.55rem;
+}
+
+.hrTopbarMeta {
+  font-size: 0.78rem;
+  color: #475569;
+}
+
+.hrSidebarLogoutBtn {
+  padding: 0.7rem 1.1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(248, 113, 113, 0.28);
+  background: linear-gradient(135deg, #fff1f2, #ffe4e6);
+  color: #b91c1c;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 10px 22px rgba(248, 113, 113, 0.14);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+  text-align: center;
+}
+
+.hrSidebarLogoutBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(248, 113, 113, 0.2);
+  background: linear-gradient(135deg, #ffe4e6, #fecdd3);
+}
+
+.hrToolbar {
+  display: flex;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.hrToolbarFilterLeft {
+  min-width: 220px;
+}
+
+.hrToolbarSearch {
+  min-width: 460px;
+}
+
+.hrToolbarCard {
+  display: flex;
+  align-items: center;
+  min-height: 60px;
+  border: 1px solid rgba(191, 219, 254, 0.85);
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 8px 20px rgba(148, 163, 184, 0.12);
+  border-radius: 999px;
+  padding: 0.15rem 0.95rem;
+}
+
+.hrToolbarCard .filterSelect {
+  min-height: 44px;
+}
+
+.handleRatingBtn {
+  padding: 0.72rem 1.2rem;
+  border-radius: 12px;
+  border: 1px solid rgba(30, 144, 255, 0.55);
+  background-color: #201f21;
+  /* background: linear-gradient(135deg, #1e90ff, #1976d2); */
+  color: #ffffff;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  /* transition: background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease; */
+  box-shadow: 0 4px 12px rgba(30, 144, 255, 0.25);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.handleRatingBtn:hover {
+  /* background: linear-gradient(135deg, #1976d2, #1565c0); */
+  background-color: #201f21;
+  border-color: rgba(30, 144, 255, 0.8);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(30, 144, 255, 0.35);
+}
+
+.hrStatsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.statCard {
+  position: relative;
+  border-radius: 18px;
+  padding: 1rem 1.1rem;
+  display: grid;
+  gap: 0.35rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.95));
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  box-shadow: 0 10px 25px rgba(148, 163, 184, 0.15);
+}
+
+.statCard::after {
+  content: '';
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.18;
+}
+
+.statCardSky { border-top: 4px solid #38bdf8; color: #0369a1; }
+.statCardSun { border-top: 4px solid #f59e0b; color: #b45309; }
+.statCardMint { border-top: 4px solid #34d399; color: #0f766e; }
+.statCardCoral { border-top: 4px solid #fb7185; color: #be123c; }
+
+.statLabel {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.statValue {
+  font-size: 2rem;
+  line-height: 1;
+  color: #0f172a;
+}
+
+.statNote {
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.hrContentPanel {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 22px;
+  padding: 1.2rem;
+  border: 1px solid rgba(219, 234, 254, 0.9);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), 0 12px 28px rgba(148, 163, 184, 0.12);
+}
+
+.hrSectionHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.hrSectionHead h3 {
+  margin: 0;
+  color: #1e293b;
+}
+
+.hrSectionHead p {
+  margin: 0.35rem 0 0;
+  color: #64748b;
+}
+
+.hrSectionPill {
+  align-self: center;
+  white-space: nowrap;
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
 .header {
   display: flex;
   justify-content: space-between;
@@ -33,8 +490,8 @@
   gap: 0.45rem;
   background: #fff;
   border: 1px solid #dbe4f0;
-  border-radius: 8px;
-  padding: 0.35rem 0.55rem;
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
 }
 
 .filterLabel {
@@ -50,6 +507,34 @@
   color: #0f172a;
   outline: none;
   min-width: 150px;
+  min-height: 40px;
+}
+
+.filterIcon {
+  width: 1rem;
+  height: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.filterIcon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .infoBanner {
@@ -151,6 +636,10 @@
   gap: 1rem;
 }
 
+.hrGrid {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
 .card {
   background: #fff;
   border-radius: 10px;
@@ -171,6 +660,12 @@
   background: #eff6ff;
 }
 
+.hrCard {
+  border-radius: 18px;
+  border: 1px solid rgba(191, 219, 254, 0.8);
+  box-shadow: 0 14px 26px rgba(148, 163, 184, 0.14);
+}
+
 .card h3 {
   font-size: 1rem;
   font-weight: 700;
@@ -187,6 +682,34 @@
 .helperText {
   color: #1d4ed8 !important;
   font-weight: 600;
+}
+
+.cardMetaRow {
+  margin-top: 0.7rem;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.ratingVisibilityPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.ratingVisiblePill {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.ratingHiddenPill {
+  background: #fee2e2;
+  color: #b91c1c;
 }
 
 .cardActions {
@@ -466,4 +989,50 @@
   padding: 1rem;
   border-radius: 8px;
   margin-bottom: 1rem;
+}
+
+@media (max-width: 1080px) {
+  .hrPage {
+    height: auto;
+    overflow: visible;
+  }
+
+  .hrShell {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .hrSidebar,
+  .hrMain {
+    position: static;
+    height: auto;
+    overflow: visible;
+  }
+
+  .hrStatsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .hrPage {
+    padding: 0.75rem;
+  }
+
+  .hrMain {
+    padding: 1rem;
+  }
+
+  .hrTopbar {
+    flex-direction: column;
+  }
+
+  .hrStatsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .scrollTopBtn {
+    right: 0.8rem;
+    bottom: 0.8rem;
+  }
 }

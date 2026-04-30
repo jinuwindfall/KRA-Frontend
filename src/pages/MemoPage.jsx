@@ -33,7 +33,7 @@ function readMemosFromAppraisal(appraisal = {}) {
   return [];
 }
 
-export default function MemoPage({ employee, onBack }) {
+export default function MemoPage({ employee, onBack, embeddedInShell = false }) {
   const [appraisals, setAppraisals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -210,30 +210,32 @@ export default function MemoPage({ employee, onBack }) {
 
   const totalMemoDeduction = memos.reduce((sum, m) => sum + Number(m.deduction || 0), 0);
 
-  return (
-    <div className={styles.page}>
-      <div className={styles.header} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
-        <h2 style={{ margin: 0, fontSize: '1.5rem', color: '#1e293b', flex: 1 }}>Staff Memos & Deductions</h2>
-        <button
-          onClick={onBack}
-          style={{
-            background: '#fff',
-            border: '1.5px solid #2563eb',
-            color: '#2563eb',
-            borderRadius: '6px',
-            padding: '6px 16px',
-            cursor: 'pointer',
-            fontSize: '0.9rem',
-            fontWeight: '600',
-            transition: 'background 0.15s',
-            whiteSpace: 'nowrap',
-          }}
-          onMouseEnter={(e) => (e.target.style.background = '#eff6ff')}
-          onMouseLeave={(e) => (e.target.style.background = '#fff')}
-        >
-          ← Back
-        </button>
-      </div>
+  const content = (
+    <>
+      {!embeddedInShell && (
+        <div className={styles.header} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+          <h2 style={{ margin: 0, fontSize: '1.5rem', color: '#1e293b', flex: 1 }}>Staff Memos & Deductions</h2>
+          <button
+            onClick={onBack}
+            style={{
+              background: '#fff',
+              border: '1.5px solid #2563eb',
+              color: '#2563eb',
+              borderRadius: '6px',
+              padding: '6px 16px',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              fontWeight: '600',
+              transition: 'background 0.15s',
+              whiteSpace: 'nowrap',
+            }}
+            onMouseEnter={(e) => (e.target.style.background = '#eff6ff')}
+            onMouseLeave={(e) => (e.target.style.background = '#fff')}
+          >
+            ← Back
+          </button>
+        </div>
+      )}
 
       <div style={{ background: '#fef3c7', border: '1px solid #f59e0b', borderRadius: 8, padding: '10px 16px', marginBottom: 12, fontSize: '0.9rem', color: '#92400e', fontWeight: 500 }}>
         ℹ️ Add memos with deduction marks to adjust staff final performance ratings. Total deduction will be applied from the final score.
@@ -520,6 +522,8 @@ export default function MemoPage({ employee, onBack }) {
           </div>
         </>
       )}
-    </div>
+    </>
   );
+
+  return embeddedInShell ? content : <div className={styles.page}>{content}</div>;
 }

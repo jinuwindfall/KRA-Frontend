@@ -37,7 +37,7 @@ function getEmployeeLabel(employeeRecord) {
   return `${name}${empId}`;
 }
 
-export default function KRAFramePage({ employee, onBack, onLogout }) {
+export default function KRAFramePage({ employee, onBack, onLogout, embeddedInShell = false }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -552,14 +552,16 @@ export default function KRAFramePage({ employee, onBack, onLogout }) {
     }
   };
 
-  return (
-    <div className={styles.page}>
-      <div className={styles.header}>
-        <h2>Common KRA Structure</h2>
-        <div className={styles.headerActions}>
-          <button className={styles.navBtn} onClick={onBack}>← Back</button>
+  const content = (
+    <>
+      {!embeddedInShell && (
+        <div className={styles.header}>
+          <h2>Common KRA Structure</h2>
+          <div className={styles.headerActions}>
+            <button className={styles.navBtn} onClick={onBack}>← Back</button>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className={styles.infoBanner}>
         HR sets only the common structure here: how many rows each step needs, the max marks, and the rating calculation. Appraisers will fill the actual content later.
@@ -1014,7 +1016,7 @@ export default function KRAFramePage({ employee, onBack, onLogout }) {
       )}
 
       <div className={styles.modalActions}>
-        <button className={styles.secondaryBtn} onClick={onBack}>Back</button>
+        {!embeddedInShell && <button className={styles.secondaryBtn} onClick={onBack}>Back</button>}
         <button type="button" className={styles.secondaryBtn} onClick={handleAddKraRow}>
           + Add Row
         </button>
@@ -1023,31 +1025,34 @@ export default function KRAFramePage({ employee, onBack, onLogout }) {
         </button>
       </div>
 
-      <button
-        type="button"
-        title="Back to top"
-        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        style={{
-          position: 'fixed',
-          bottom: 32,
-          right: 32,
-          width: 42,
-          height: 42,
-          borderRadius: '50%',
-          background: '#3b82f6',
-          color: '#fff',
-          border: 'none',
-          fontSize: '1.2rem',
-          cursor: 'pointer',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 999,
-        }}
-      >
-        ↑
-      </button>
-    </div>
+      {!embeddedInShell && (
+        <button
+          type="button"
+          title="Back to top"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          style={{
+            position: 'fixed',
+            bottom: 32,
+            right: 32,
+            width: 42,
+            height: 42,
+            borderRadius: '50%',
+            background: '#3b82f6',
+            color: '#fff',
+            border: 'none',
+            fontSize: '1.2rem',
+            cursor: 'pointer',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          ↑
+        </button>
+      )}
+    </>
   );
+
+  return embeddedInShell ? content : <div className={styles.page}>{content}</div>;
 }

@@ -212,9 +212,46 @@
   cursor: not-allowed;
 }
 
+/* ── Form Actions ── */
+.formActions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.cancelBtn {
+  padding: 10px 24px;
+  background: #64748b;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.cancelBtn:hover {
+  background: #475569;
+}
+
+/* ── Search Section ── */
+.searchSection {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.searchField {
+  flex: 1;
+  min-width: 300px;
+  max-width: 400px;
+}
+
 /* ── Table ── */
 .tableWrap {
-  overflow-x: auto;
+  /* Removed overflow-x: auto to let content pane handle scrolling */
 }
 
 .table {

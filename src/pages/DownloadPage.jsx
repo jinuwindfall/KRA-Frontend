@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { getAllAppraisals, getEmployees } from '../api/appraisalApi';
+import { normalizeFrameConfig } from '../utils/frameConfig';
 import { getFinalMark, getOverallPerformance, getSectionWeight } from '../utils/ratingUtils';
 import styles from './DownloadPage.module.css';
 
@@ -39,14 +40,30 @@ function formatMonthYear(value) {
   return date.toLocaleString('en-US', { month: 'short', year: '2-digit' });
 }
 
+function getAppraisalMeta(appraisal = {}) {
+  const frame = normalizeFrameConfig(appraisal?.frame_config);
+  const options = frame?.appraisal_options || {};
+
+  return {
+    appraisalType: appraisal?.appraisal_type || options.default_type || '—',
+    periodFrom: appraisal?.period_from || options.period_from || '',
+    periodTo: appraisal?.period_to || options.period_to || '',
+  };
+}
+
 function getDisplayAppraisals(appraisals = []) {
   const grouped = new Map();
 
-  const getMeta = (item) => ({
-    periodTo: item?.period_to ? new Date(item.period_to).getTime() : 0,
+  const getMeta = (item) => {
+    const meta = getAppraisalMeta(item);
+    return {
+      periodTo: meta.periodTo ? new Date(meta.periodTo).getTime() : 0,
+      appraisalType: `${meta.appraisalType || ''}`,
+      id: Number(item?.id) || 0,
     updatedAt: item?.updated_at ? new Date(item.updated_at).getTime() : 0,
     kraCount: Array.isArray(item?.kras) ? item.kras.length : 0,
-  });
+    };
+  };
 
   appraisals.forEach((appraisal) => {
     const key = appraisal.employee ?? appraisal.employee_name;
@@ -64,7 +81,16 @@ function getDisplayAppraisals(appraisals = []) {
       (currentMeta.periodTo === existingMeta.periodTo && currentMeta.updatedAt > existingMeta.updatedAt) ||
       (currentMeta.periodTo === existingMeta.periodTo &&
         currentMeta.updatedAt === existingMeta.updatedAt &&
-        currentMeta.kraCount > existingMeta.kraCount);
+        currentMeta.kraCount > existingMeta.kraCount) ||
+      (currentMeta.periodTo === existingMeta.periodTo &&
+        currentMeta.updatedAt === existingMeta.updatedAt &&
+        currentMeta.kraCount === existingMeta.kraCount &&
+        currentMeta.appraisalType > existingMeta.appraisalType) ||
+      (currentMeta.periodTo === existingMeta.periodTo &&
+        currentMeta.updatedAt === existingMeta.updatedAt &&
+        currentMeta.kraCount === existingMeta.kraCount &&
+        currentMeta.appraisalType === existingMeta.appraisalType &&
+        currentMeta.id > existingMeta.id);
 
     grouped.set(key, {
       ...(shouldReplace ? appraisal : existing),
@@ -152,6 +178,7 @@ function AppraisalPreview({ appraisal, employeeMap, exportFields, pdfMode = fals
   const customFields = appraisal?.frame_config?.custom_fields || [];
   const extraAppraiserData = appraisal?.extra_appraiser_data || {};
   const ratingSettings = appraisal?.frame_config?.rating_settings || {};
+  const appraisalMeta = getAppraisalMeta(appraisal);
   const formulaMode = ratingSettings?.formula_mode || 'custom_formula';
   const formulaText = formulaMode === 'custom_formula'
     ? (ratingSettings?.formula_expression || '')
@@ -204,14 +231,14 @@ function AppraisalPreview({ appraisal, employeeMap, exportFields, pdfMode = fals
             <div className={styles.typeRow}>
               <span className={styles.typeTitle}>Type of Appraisal:</span>
               <span className={`${styles.typeBadge} ${styles.typeActive}`}>
-                {appraisal.appraisal_type || '—'}
+                {appraisalMeta.appraisalType || '—'}
               </span>
             </div>
 
             <div className={styles.periodBar}>
               <span>Appraisal Period (m/y):</span>
-              <span>From: {formatMonthYear(appraisal.period_from)}</span>
-              <span>To: {formatMonthYear(appraisal.period_to)}</span>
+              <span>From: {formatMonthYear(appraisalMeta.periodFrom)}</span>
+              <span>To: {formatMonthYear(appraisalMeta.periodTo)}</span>
             </div>
           </div>
         )}
@@ -297,6 +324,7 @@ export default function DownloadPage({
   onBack,
   selectedAppraisalIds = [],
   setSelectedAppraisalIds,
+  embeddedInShell = false,
 }) {
   const [appraisals, setAppraisals] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -501,6 +529,7 @@ export default function DownloadPage({
       const rows = [headers];
 
       targetAppraisals.forEach((appraisal) => {
+        const appraisalMeta = getAppraisalMeta(appraisal);
         const overall = getOverallPerformance(appraisal, {});
         const kras = appraisal.kras || [];
         const objectives = kras.filter((item) => item.section === 'kra_objectives');
@@ -514,9 +543,9 @@ export default function DownloadPage({
             appraisal.employee_emp_id || '—',
             appraisal.employee_department || '—',
             appraisal.employee_designation || employeeMap.get(appraisal.employee)?.designation || '—',
-            appraisal.appraisal_type || '—',
-            appraisal.period_from || '—',
-            appraisal.period_to || '—',
+            appraisalMeta.appraisalType || '—',
+            appraisalMeta.periodFrom || '—',
+            appraisalMeta.periodTo || '—',
             appraisal.status || '—'
           );
         }
@@ -589,11 +618,13 @@ export default function DownloadPage({
     }
   };
 
-  return (
-    <div className={styles.page}>
-      <div className={styles.topBar}>
-        <button className={styles.backBtn} onClick={onBack}>← Back</button>
-      </div>
+  const content = (
+    <>
+      {!embeddedInShell && (
+        <div className={styles.topBar}>
+          <button className={styles.backBtn} onClick={onBack}>← Back</button>
+        </div>
+      )}
 
       <div className={styles.infoBanner}>
         The preview and the PDF now follow the same template. Field selection is reflected immediately in the design.
@@ -670,7 +701,7 @@ export default function DownloadPage({
                 </button>
               </div>
 
-              <div style={{ padding: '0 0 0.75rem 0' }}>
+              <div style={{ padding: '0.75rem 0 0.75rem 0' }}>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#4a5568', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   🔍 Search by Name
                 </label>
@@ -702,20 +733,23 @@ export default function DownloadPage({
                   displayAppraisals.filter((item) =>
                     !staffNameSearch.trim() ||
                     (item.employee_name || '').toLowerCase().includes(staffNameSearch.trim().toLowerCase())
-                  ).map((item) => (
-                    <label key={item.id} className={styles.checkRow}>
-                      <span>
-                        <span className={styles.checkLabel}>{item.employee_name}</span>
-                        <span className={styles.checkMeta}>{item.employee_department || '—'} • {item.appraisal_type || 'Annual'}</span>
-                      </span>
-                      <input
-                        className={styles.checkInput}
-                        type="checkbox"
-                        checked={selectedAppraisalIds.includes(item.id)}
-                        onChange={() => handleToggleAppraisalSelection(item.id)}
-                      />
-                    </label>
-                  ))
+                  ).map((item) => {
+                    const itemMeta = getAppraisalMeta(item);
+                    return (
+                      <label key={item.id} className={styles.checkRow}>
+                        <span>
+                          <span className={styles.checkLabel}>{item.employee_name}</span>
+                          <span className={styles.checkMeta}>{item.employee_department || '—'} • {itemMeta.appraisalType || 'Annual'}</span>
+                        </span>
+                        <input
+                          className={styles.checkInput}
+                          type="checkbox"
+                          checked={selectedAppraisalIds.includes(item.id)}
+                          onChange={() => handleToggleAppraisalSelection(item.id)}
+                        />
+                      </label>
+                    );
+                  })
                 ) : (
                   <div className={styles.emptyState}>No staff found.</div>
                 )}
@@ -754,6 +788,9 @@ export default function DownloadPage({
           />
         ))}
       </div>
-    </div>
+
+    </>
   );
+
+  return embeddedInShell ? content : <div className={styles.page}>{content}</div>;
 }

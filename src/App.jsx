@@ -9,7 +9,35 @@ import DownloadPage from "./pages/DownloadPage";
 import ChangePasswordPage from "./pages/ChangePasswordPage";
 import MemoPage from "./pages/MemoPage";
 import AppraisalForm from "./components/ApprasialForm/AppraisalForm";
+import HRShell from "./components/HRShell";
 import { getMyAppraisals } from "./api/appraisalApi";
+
+const HR_PAGE_CONTENT = {
+  structure: {
+    title: "Common KRA Structure",
+    subtitle: "Maintain the shared appraisal structure, sections, targeting rules, and rating setup for staff.",
+  },
+  downloads: {
+    title: "Download Center",
+    subtitle: "Preview, filter, and export the latest appraisal documents for the selected staff set.",
+  },
+  employees: {
+    title: "Employees",
+    subtitle: "Manage employee records, imports, appraiser mappings, and reviewer assignments from one place.",
+  },
+  departments: {
+    title: "Departments",
+    subtitle: "Create, update, and clean up department records inside the HR control panel.",
+  },
+  memos: {
+    title: "Memos",
+    subtitle: "Review staff deduction memos and keep memo entries aligned with the appraisal records.",
+  },
+  "change-password": {
+    title: "Change Password",
+    subtitle: "Update account credentials without leaving the HR workspace.",
+  },
+};
 
 function App() {
   const [employee, setEmployee] = useState(() => {
@@ -37,6 +65,36 @@ function App() {
     setEmployee(null);
     setSelectedAppraisalId(null);
     setPage("appraisals");
+  };
+
+  const handleOpenMyKra = (appraisalId) => {
+    if (typeof appraisalId === "number") {
+      setMyAppraisalId(appraisalId);
+      return;
+    }
+
+    getMyAppraisals()
+      .then((list) => {
+        if (list.length > 0) {
+          const latest = [...list].sort((a, b) => {
+            const aPeriod = a?.period_to ? new Date(a.period_to).getTime() : 0;
+            const bPeriod = b?.period_to ? new Date(b.period_to).getTime() : 0;
+            if (bPeriod !== aPeriod) return bPeriod - aPeriod;
+
+            const aUpdated = a?.updated_at ? new Date(a.updated_at).getTime() : 0;
+            const bUpdated = b?.updated_at ? new Date(b.updated_at).getTime() : 0;
+            return bUpdated - aUpdated;
+          })[0];
+
+          if (latest?.id) {
+            setMyAppraisalId(latest.id);
+            return;
+          }
+        }
+
+        alert("No appraisal assigned to you yet.");
+      })
+      .catch(() => alert("Failed to load your appraisal."));
   };
 
   // Staff: auto-fetch their appraisal and go straight to the form
@@ -143,79 +201,105 @@ function App() {
     );
   }
 
-  // Departments page
-  if (page === "departments") {
-    return (
-      <DepartmentsPage
-        employee={employee}
-        onBack={() => setPage("appraisals")}
-      />
-    );
-  }
+  const renderPage = () => {
+    if (page === "departments") {
+      return (
+        <DepartmentsPage
+          employee={employee}
+          onBack={() => setPage("appraisals")}
+          embeddedInShell={isHrShellPage}
+        />
+      );
+    }
 
-  // Employees page
-  if (page === "employees") {
-    return (
-      <EmployeesPage
-        employee={employee}
-        onBack={() => setPage("appraisals")}
-      />
-    );
-  }
+    if (page === "employees") {
+      return (
+        <EmployeesPage
+          employee={employee}
+          onBack={() => setPage("appraisals")}
+          embeddedInShell={isHrShellPage}
+        />
+      );
+    }
 
-  if (page === "structure") {
+    if (page === "structure") {
+      return (
+        <KRAFramePage
+          employee={employee}
+          onBack={() => setPage("appraisals")}
+          onLogout={handleLogout}
+          embeddedInShell={isHrShellPage}
+        />
+      );
+    }
+
+    if (page === "downloads") {
+      return (
+        <DownloadPage
+          employee={employee}
+          onBack={() => setPage("appraisals")}
+          onLogout={handleLogout}
+          selectedAppraisalIds={selectedDownloadIds}
+          setSelectedAppraisalIds={setSelectedDownloadIds}
+          embeddedInShell={isHrShellPage}
+        />
+      );
+    }
+
+    if (page === "memos") {
+      return (
+        <MemoPage
+          employee={employee}
+          onBack={() => setPage("appraisals")}
+          embeddedInShell={isHrShellPage}
+        />
+      );
+    }
+
+    if (page === "change-password") {
+      return (
+        <ChangePasswordPage
+          employee={employee}
+          onBack={() => setPage("appraisals")}
+          onLogout={handleLogout}
+        />
+      );
+    }
+
     return (
-      <KRAFramePage
+      <AppraisalListPage
         employee={employee}
-        onBack={() => setPage("appraisals")}
+        onSelect={(id) => setSelectedAppraisalId(id)}
         onLogout={handleLogout}
-      />
-    );
-  }
-
-  if (page === "downloads") {
-    return (
-      <DownloadPage
-        employee={employee}
-        onBack={() => setPage("appraisals")}
-        onLogout={handleLogout}
+        onNavigate={setPage}
+        onOpenMyKra={handleOpenMyKra}
         selectedAppraisalIds={selectedDownloadIds}
         setSelectedAppraisalIds={setSelectedDownloadIds}
       />
     );
-  }
+  };
 
-  if (page === "memos") {
-    return (
-      <MemoPage
-        employee={employee}
-        onBack={() => setPage("appraisals")}
-      />
-    );
-  }
+  const isHrShellPage = employee?.role === "hr" && Boolean(HR_PAGE_CONTENT[page]);
 
-  if (page === "change-password") {
+  if (isHrShellPage) {
+    const shellContent = HR_PAGE_CONTENT[page];
+
     return (
-      <ChangePasswordPage
+      <HRShell
         employee={employee}
-        onBack={() => setPage("appraisals")}
+        activePage={page}
+        onNavigate={setPage}
         onLogout={handleLogout}
-      />
+        onOpenMyKra={handleOpenMyKra}
+        title={shellContent.title}
+        subtitle={shellContent.subtitle}
+      >
+        {renderPage()}
+      </HRShell>
     );
   }
 
-  // Default: Appraisal list
-  return (
-    <AppraisalListPage
-      employee={employee}
-      onSelect={(id) => setSelectedAppraisalId(id)}
-      onLogout={handleLogout}
-      onNavigate={setPage}
-      onOpenMyKra={setMyAppraisalId}
-      selectedAppraisalIds={selectedDownloadIds}
-      setSelectedAppraisalIds={setSelectedDownloadIds}
-    />
-  );
+  return renderPage();
 }
 
 export default App;

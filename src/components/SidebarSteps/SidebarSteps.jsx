@@ -6,6 +6,8 @@ const SidebarSteps = ({
   completedSteps = [],
   onStepClick,
   onClose,
+  userName,
+  onLogout,
 }) => {
   return (
     <aside className={styles.sidebar}>
@@ -48,6 +50,15 @@ const SidebarSteps = ({
           );
         })}
       </ul>
+
+      {onLogout && (
+        <div className={styles.sidebarFooter}>
+          <span className={styles.sidebarUser}>Logged in as {userName || 'User'}</span>
+          <button type="button" className={styles.sidebarLogoutBtn} onClick={onLogout}>
+            Logout
+          </button>
+        </div>
+      )}
     </aside>
   );
 };

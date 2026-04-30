@@ -6,7 +6,7 @@ function toTitleCase(str) {
   return str.trim().split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
 
-export default function DepartmentsPage({ employee, onBack }) {
+export default function DepartmentsPage({ employee, onBack, embeddedInShell = false }) {
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -132,12 +132,14 @@ export default function DepartmentsPage({ employee, onBack }) {
     }
   };
 
-  return (
-    <div className={styles.page}>
-      <div className={styles.header}>
-        <button className={styles.backBtn} onClick={onBack}>← Back</button>
-        <h2>Departments</h2>
-      </div>
+  const content = (
+    <>
+      {!embeddedInShell && (
+        <div className={styles.header}>
+          <button className={styles.backBtn} onClick={onBack}>← Back</button>
+          <h2>Departments</h2>
+        </div>
+      )}
 
       {canAdd && (
         <form className={styles.addForm} onSubmit={handleAdd}>
@@ -289,6 +291,8 @@ export default function DepartmentsPage({ employee, onBack }) {
           </li>
         ))}
       </ul>
-    </div>
+    </>
   );
+
+  return embeddedInShell ? content : <div className={styles.page}>{content}</div>;
 }
