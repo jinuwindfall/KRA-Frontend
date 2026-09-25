@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  getAllAppraisals,
   getDepartments,
   getEmployees,
   getKRATemplate,
-  patchAppraisal,
   saveKRATemplate,
 } from '../api/appraisalApi';
 import {
@@ -50,6 +48,7 @@ export default function KRAFramePage({ employee, onBack, onLogout, embeddedInShe
   const [staffDropdownOpen, setStaffDropdownOpen] = useState(false);
   const [deptSearchQuery, setDeptSearchQuery] = useState('');
   const [deptDropdownOpen, setDeptDropdownOpen] = useState(false);
+  const [loadingPeriod, setLoadingPeriod] = useState(false);
 
   useEffect(() => {
     Promise.all([getKRATemplate(), getDepartments(), getEmployees()])
@@ -169,6 +168,60 @@ export default function KRAFramePage({ employee, onBack, onLogout, embeddedInShe
     if (key === 'target_scope' && value !== 'department') {
       setDeptSearchQuery('');
       setDeptDropdownOpen(false);
+    }
+  };
+
+  // Re-fetch the structure actually saved for the Period From/To currently entered above,
+  // so HR can check what (if anything) exists for a given period instead of always seeing
+  // whatever was loaded/saved last.
+  const handleLoadForPeriod = async () => {
+    const periodFrom = frameConfig.appraisal_options?.period_from || '';
+    const periodTo = frameConfig.appraisal_options?.period_to || '';
+
+    if (!periodFrom || !periodTo) {
+      setError('Select both Period From and Period To to load the structure for that period.');
+      return;
+    }
+    if (periodFrom > periodTo) {
+      setError('Period From cannot be after Period To.');
+      return;
+    }
+
+    setLoadingPeriod(true);
+    setError('');
+    setSuccess('');
+    try {
+      const data = await getKRATemplate({ period_from: periodFrom, period_to: periodTo });
+      if (data && data.id) {
+        setFrameConfig(normalizeFrameConfig({
+          ...data.frame_config,
+          appraisal_options: {
+            ...data.frame_config?.appraisal_options,
+            period_from: periodFrom,
+            period_to: periodTo,
+          },
+        }));
+        setTemplateKras((data.rows || []).map((row) => ({
+          id: row.id,
+          section: row.section,
+          max_mark: row.max_mark || '',
+        })));
+        setSuccess(`Loaded the saved structure for ${periodFrom} → ${periodTo}.`);
+      } else {
+        setFrameConfig((prev) => normalizeFrameConfig({
+          appraisal_options: {
+            ...prev.appraisal_options,
+            period_from: periodFrom,
+            period_to: periodTo,
+          },
+        }));
+        setTemplateKras([EMPTY_KRA_ROW]);
+        setSuccess(`No structure saved yet for ${periodFrom} → ${periodTo} — starting a new one.`);
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to load the structure for that period.');
+    } finally {
+      setLoadingPeriod(false);
     }
   };
 
@@ -493,57 +546,33 @@ export default function KRAFramePage({ employee, onBack, onLogout, embeddedInShe
         return { section: item.section, sl_no: nextSlNo, max_mark: maxMark };
       });
 
-      const saved = await saveKRATemplate(cleanedFrame, preparedRows);
+      const scope = {
+        period_from: cleanedFrame.appraisal_options?.period_from || '',
+        period_to: cleanedFrame.appraisal_options?.period_to || '',
+        ...(cleanedFrame.appraisal_options?.target_scope === 'department'
+          ? { department_ids: cleanedFrame.appraisal_options?.target_department_ids || [] }
+          : {}),
+        ...(cleanedFrame.appraisal_options?.target_scope === 'selected_staff'
+          ? { employee_ids: cleanedFrame.appraisal_options?.target_staff_ids || [] }
+          : {}),
+      };
 
-      const allAppraisals = await getAllAppraisals();
-      const targetScope = cleanedFrame.appraisal_options?.target_scope;
-      const selectedStaffIds = new Set((cleanedFrame.appraisal_options?.target_staff_ids || []).map((id) => `${id}`));
-      const selectedDepartmentIds = new Set((cleanedFrame.appraisal_options?.target_department_ids || []).map((id) => `${id}`));
-      const selectedDepartmentNames = new Set(
-        departments
-          .filter((dept) => selectedDepartmentIds.has(`${dept.id}`))
-          .map((dept) => `${dept.name || ''}`.trim().toLowerCase())
-      );
-
-      const targetAppraisals = (Array.isArray(allAppraisals) ? allAppraisals : []).filter((appraisal) => {
-        if (targetScope === 'department') {
-          const appraisalDeptName = `${appraisal.employee_department || ''}`.trim().toLowerCase();
-          const appraisalDeptId = `${appraisal.employee_department_id || ''}`;
-          return selectedDepartmentNames.has(appraisalDeptName) || selectedDepartmentIds.has(appraisalDeptId);
-        }
-        if (targetScope === 'selected_staff') {
-          return selectedStaffIds.has(`${appraisal.employee}`);
-        }
-        return true;
-      });
-
-      await Promise.all(
-        targetAppraisals.map((appraisal) => {
-          const previousExtras = appraisal?.extra_appraiser_data || {};
-          const nextExtras = { ...previousExtras };
-          if (isSpecialAppraisalType(cleanedFrame.appraisal_options?.default_type)) {
-            nextExtras.special_appraisal_text = cleanedFrame.appraisal_options?.special_appraisal_text || '';
-          } else {
-            delete nextExtras.special_appraisal_text;
-          }
-
-          return patchAppraisal(appraisal.id, {
-            appraisal_type: cleanedFrame.appraisal_options?.default_type || '',
-            period_from: cleanedFrame.appraisal_options?.period_from || '',
-            period_to: cleanedFrame.appraisal_options?.period_to || '',
-            extra_appraiser_data: nextExtras,
-            frame_config: cleanedFrame,
-          });
-        })
-      );
+      // The backend scopes this to exactly the given period + department/staff selection,
+      // applying frame_config/appraisal_type/extras and syncing KRA rows — skipping any
+      // appraisal that already has a mark entered, so in-progress work is never overwritten.
+      const saved = await saveKRATemplate(cleanedFrame, preparedRows, scope);
 
       setTemplateKras(saved.rows.map((row) => ({
         id: row.id,
         section: row.section,
         max_mark: row.max_mark,
       })));
+      const skippedCount = saved.skipped_appraisal_count || 0;
       setSuccess(
-        `KRA structure saved and synced to ${targetAppraisals.length} appraisal(s).`
+        `KRA structure saved and synced to ${saved.applied_appraisal_count} appraisal(s).`
+        + (skippedCount > 0
+          ? ` ${skippedCount} appraisal(s) already had marks entered and were left unchanged.`
+          : '')
       );
     } catch (err) {
       setError(err.message || 'Failed to save the KRA structure.');
@@ -617,6 +646,16 @@ export default function KRAFramePage({ employee, onBack, onLogout, embeddedInShe
                   value={frameConfig.appraisal_options?.period_to || ''}
                   onChange={(e) => handleAppraisalOptionChange('period_to', e.target.value)}
                 />
+              </div>
+              <div className={styles.inputGroup}>
+                <button
+                  type="button"
+                  className={styles.secondaryBtn}
+                  onClick={handleLoadForPeriod}
+                  disabled={loadingPeriod}
+                >
+                  {loadingPeriod ? 'Loading…' : 'Load structure for this period'}
+                </button>
               </div>
               <div className={styles.inputGroup}>
                 <label>KRA Structure Target</label>

@@ -27,6 +27,19 @@ async function handle(res) {
   return res.json();
 }
 
+function buildQueryString(params = {}) {
+  const query = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === null || value === undefined) return;
+    if (typeof value === 'string' && value.trim() === '') return;
+    query.append(key, `${value}`);
+  });
+
+  const queryString = query.toString();
+  return queryString ? `?${queryString}` : '';
+}
+
 export async function login(username, password) {
   const res = await fetch(`${BASE}/employees/api/login/`, {
     method: 'POST',
@@ -54,15 +67,15 @@ export async function changePassword(current_password, new_password) {
   return handle(res);
 }
 
-export async function getMyAppraisals() {
-  const res = await fetch(`${BASE}/appraisals/api/appraisals/my/`, {
+export async function getMyAppraisals(params = {}) {
+  const res = await fetch(`${BASE}/appraisals/api/appraisals/my/${buildQueryString(params)}`, {
     headers: authTokenHeaders(),
   });
   return handle(res);
 }
 
-export async function getAllAppraisals() {
-  const res = await fetch(`${BASE}/appraisals/api/appraisals/`, {
+export async function getAllAppraisals(params = {}) {
+  const res = await fetch(`${BASE}/appraisals/api/appraisals/${buildQueryString(params)}`, {
     headers: authTokenHeaders(),
   });
   return handle(res);
@@ -116,18 +129,26 @@ export async function deleteKRA(id) {
 
 // ── KRA Template ──
 
-export async function getKRATemplate() {
-  const res = await fetch(`${BASE}/appraisals/api/kra-template/`, {
+export async function getKRATemplate(params = {}) {
+  const res = await fetch(`${BASE}/appraisals/api/kra-template/${buildQueryString(params)}`, {
     headers: authTokenHeaders(),
   });
   return handle(res);
 }
 
-export async function saveKRATemplate(frame_config, rows) {
+export async function saveKRATemplate(frame_config, rows, scope = {}) {
+  const { department_ids, employee_ids, period_from, period_to } = scope;
   const res = await fetch(`${BASE}/appraisals/api/kra-template/`, {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify({ frame_config, rows }),
+    body: JSON.stringify({
+      frame_config,
+      rows,
+      ...(department_ids ? { department_ids } : {}),
+      ...(employee_ids ? { employee_ids } : {}),
+      ...(period_from ? { period_from } : {}),
+      ...(period_to ? { period_to } : {}),
+    }),
   });
   return handle(res);
 }
