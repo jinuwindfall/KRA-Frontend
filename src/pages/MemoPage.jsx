@@ -1,46 +1,12 @@
 import { useEffect, useState } from 'react';
-import { getAllAppraisals, getAppraisal, patchAppraisal } from '../api/appraisalApi';
+import { createEmployeeMemo, deleteEmployeeMemo, getEmployeeMemosGrouped, updateEmployeeMemo } from '../api/appraisalApi';
 import styles from './AppraisalListPage.module.css';
 
-function normalizeMemoList(raw) {
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .map((item) => {
-      if (!item || typeof item !== 'object') return null;
-      const reason = String(item.reason ?? item.memo_reason ?? item.note ?? item.remarks ?? '').trim();
-      const deduction = Number(item.deduction ?? item.deduction_mark ?? item.mark ?? 0);
-      if (!reason) return null;
-      return {
-        reason,
-        deduction: Number.isFinite(deduction) && deduction >= 0 ? deduction : 0,
-      };
-    })
-    .filter(Boolean);
-}
-
-function readMemosFromAppraisal(appraisal = {}) {
-  const fromExtraData = normalizeMemoList(
-    appraisal.extra_appraiser_data?.memos || appraisal.extra_appraiser_data?.memo_history
-  );
-  if (fromExtraData.length > 0) return fromExtraData;
-
-  const fromDirectField = normalizeMemoList(appraisal.memos);
-  if (fromDirectField.length > 0) return fromDirectField;
-
-  const fromAlternativeField = normalizeMemoList(appraisal.memo_entries || appraisal.memo_list);
-  if (fromAlternativeField.length > 0) return fromAlternativeField;
-
-  return [];
-}
-
-export default function MemoPage({ employee, onBack, embeddedInShell = false }) {
-  const [appraisals, setAppraisals] = useState([]);
+export default function MemoPage({ onBack, embeddedInShell = false }) {
+  const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedAppraisalId, setSelectedAppraisalId] = useState(null);
-  const [selectedAppraisal, setSelectedAppraisal] = useState(null);
-  const [memos, setMemos] = useState([]);
-  const [loadingAppraisal, setLoadingAppraisal] = useState(false);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
 
   // Form state
   const [memoReason, setMemoReason] = useState('');
@@ -50,64 +16,33 @@ export default function MemoPage({ employee, onBack, embeddedInShell = false }) 
   const [saveSuccess, setSaveSuccess] = useState('');
 
   // Edit state
-  const [editingMemoIndex, setEditingMemoIndex] = useState(null);
+  const [editingMemoId, setEditingMemoId] = useState(null);
   const [editReason, setEditReason] = useState('');
   const [editDeduction, setEditDeduction] = useState('');
 
   const [searchText, setSearchText] = useState('');
 
+  const loadEmployees = () =>
+    getEmployeeMemosGrouped().then((list) => {
+      setEmployees(Array.isArray(list) ? list : []);
+      return list;
+    });
+
   useEffect(() => {
-    getAllAppraisals()
-      .then((list) => {
-        // All appraisals returned are for staff
-        setAppraisals(list);
-      })
+    loadEmployees()
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, []);
 
-  const refreshSelectedAppraisal = async (appraisalId) => {
-    const appraisal = await getAppraisal(appraisalId);
-    setSelectedAppraisal(appraisal);
-    setMemos(readMemosFromAppraisal(appraisal));
-    return appraisal;
-  };
+  const selectedEmployee = employees.find((emp) => emp.id === selectedEmployeeId) || null;
+  const memos = selectedEmployee?.memos || [];
 
-  const saveMemos = async (updatedMemos) => {
-    const actor = employee?.name || employee?.username || employee?.emp_id || 'hr';
-    const nowIso = new Date().toISOString();
-    const updatedExtraData = {
-      ...(selectedAppraisal?.extra_appraiser_data || {}),
-      // Persist memos in extra_appraiser_data for reliable backend storage/retrieval.
-      memos: updatedMemos,
-      memo_history: updatedMemos,
-      memo_last_updated_at: nowIso,
-      memo_last_updated_by: actor,
-      memo_total_deduction: updatedMemos.reduce((sum, m) => sum + Number(m.deduction || 0), 0),
-    };
-
-    try {
-      await patchAppraisal(selectedAppraisalId, { memos: updatedMemos, extra_appraiser_data: updatedExtraData });
-    } catch {
-      // Fallback for serializers that don't accept a dedicated "memos" field.
-      await patchAppraisal(selectedAppraisalId, { extra_appraiser_data: updatedExtraData });
-    }
-  };
-
-  const handleSelectAppraisal = async (appraisalId) => {
-    setSelectedAppraisalId(appraisalId);
-    setLoadingAppraisal(true);
+  const handleSelectEmployee = (employeeId) => {
+    setSelectedEmployeeId(employeeId);
+    setMemoReason('');
+    setMemoDeduction('');
+    setEditingMemoId(null);
     setSaveError('');
-    try {
-      await refreshSelectedAppraisal(appraisalId);
-      setMemoReason('');
-      setMemoDeduction('');
-      setEditingMemoIndex(null);
-    } catch (err) {
-      setSaveError(err.message);
-    } finally {
-      setLoadingAppraisal(false);
-    }
   };
 
   const handleAddMemo = async () => {
@@ -125,12 +60,8 @@ export default function MemoPage({ employee, onBack, embeddedInShell = false }) 
     setSaving(true);
     setSaveError('');
     try {
-      const updatedMemos = [
-        ...(memos || []),
-        { reason: memoReason.trim(), deduction },
-      ];
-      await saveMemos(updatedMemos);
-      await refreshSelectedAppraisal(selectedAppraisalId);
+      await createEmployeeMemo(selectedEmployeeId, memoReason.trim(), deduction);
+      await loadEmployees();
       setMemoReason('');
       setMemoDeduction('');
       setSaveSuccess('Memo added successfully.');
@@ -142,11 +73,10 @@ export default function MemoPage({ employee, onBack, embeddedInShell = false }) 
     }
   };
 
-  const handleEditMemo = (index) => {
-    const memo = memos[index];
-    setEditingMemoIndex(index);
-    setEditReason(memo.reason);
-    setEditDeduction(memo.deduction.toString());
+  const handleEditMemo = (memo) => {
+    setEditingMemoId(memo.id);
+    setEditReason(memo.memo);
+    setEditDeduction(String(memo.deduction ?? ''));
   };
 
   const handleSaveEditMemo = async () => {
@@ -164,12 +94,12 @@ export default function MemoPage({ employee, onBack, embeddedInShell = false }) 
     setSaving(true);
     setSaveError('');
     try {
-      const updatedMemos = memos.map((m, i) =>
-        i === editingMemoIndex ? { reason: editReason.trim(), deduction } : m
-      );
-      await saveMemos(updatedMemos);
-      await refreshSelectedAppraisal(selectedAppraisalId);
-      setEditingMemoIndex(null);
+      await updateEmployeeMemo(selectedEmployeeId, editingMemoId, {
+        memo: editReason.trim(),
+        deduction,
+      });
+      await loadEmployees();
+      setEditingMemoId(null);
       setEditReason('');
       setEditDeduction('');
       setSaveSuccess('Memo updated successfully.');
@@ -181,13 +111,12 @@ export default function MemoPage({ employee, onBack, embeddedInShell = false }) 
     }
   };
 
-  const handleDeleteMemo = async (index) => {
+  const handleDeleteMemo = async (memo) => {
     setSaving(true);
     setSaveError('');
     try {
-      const updatedMemos = memos.filter((_, i) => i !== index);
-      await saveMemos(updatedMemos);
-      await refreshSelectedAppraisal(selectedAppraisalId);
+      await deleteEmployeeMemo(selectedEmployeeId, memo.id);
+      await loadEmployees();
       setSaveSuccess('Memo deleted successfully.');
       setTimeout(() => setSaveSuccess(''), 3000);
     } catch (err) {
@@ -198,14 +127,14 @@ export default function MemoPage({ employee, onBack, embeddedInShell = false }) 
   };
 
   const handleCancelEdit = () => {
-    setEditingMemoIndex(null);
+    setEditingMemoId(null);
     setEditReason('');
     setEditDeduction('');
   };
 
-  const filteredAppraisals = appraisals.filter((a) =>
+  const filteredEmployees = employees.filter((emp) =>
     !searchText.trim() ||
-    (a.employee_name || '').toLowerCase().includes(searchText.trim().toLowerCase())
+    (emp.name || '').toLowerCase().includes(searchText.trim().toLowerCase())
   );
 
   const totalMemoDeduction = memos.reduce((sum, m) => sum + Number(m.deduction || 0), 0);
@@ -246,7 +175,7 @@ export default function MemoPage({ employee, onBack, embeddedInShell = false }) 
       {saveSuccess && <div style={{ background: '#d1fae5', border: '1px solid #10b981', borderRadius: 8, padding: '10px 16px', marginBottom: 12, fontSize: '0.9rem', color: '#065f46', fontWeight: 600 }}>✔ {saveSuccess}</div>}
 
       {loading ? (
-        <div className={styles.loading}>Loading staff appraisals…</div>
+        <div className={styles.loading}>Loading staff…</div>
       ) : (
         <>
           <div style={{ marginBottom: '1.5rem' }}>
@@ -273,23 +202,28 @@ export default function MemoPage({ employee, onBack, embeddedInShell = false }) 
             <div>
               <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem', color: '#1e293b' }}>Staff List</h3>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, border: '1px solid #e2e8f0', borderRadius: 8, maxHeight: 500, overflowY: 'auto' }}>
-                {filteredAppraisals.length === 0 ? (
+                {filteredEmployees.length === 0 ? (
                   <li style={{ padding: '1rem', textAlign: 'center', color: '#64748b' }}>No staff found.</li>
                 ) : (
-                  filteredAppraisals.map((appraisal) => (
+                  filteredEmployees.map((emp) => (
                     <li
-                      key={appraisal.id}
-                      onClick={() => handleSelectAppraisal(appraisal.id)}
+                      key={emp.id}
+                      onClick={() => handleSelectEmployee(emp.id)}
                       style={{
                         padding: '10px 12px',
                         borderBottom: '1px solid #e2e8f0',
                         cursor: 'pointer',
-                        background: selectedAppraisalId === appraisal.id ? '#dbeafe' : '#fff',
+                        background: selectedEmployeeId === emp.id ? '#dbeafe' : '#fff',
                         transition: 'background 0.15s',
                       }}
                     >
-                      <div style={{ fontWeight: 600, color: '#1e293b' }}>{appraisal.employee_name}</div>
-                      <div style={{ fontSize: '0.85rem', color: '#64748b' }}>Dept: {appraisal.employee_department || '—'}</div>
+                      <div style={{ fontWeight: 600, color: '#1e293b' }}>{emp.name} ({emp.emp_id})</div>
+                      <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                        Dept: {emp.department_name || '—'}
+                        {Array.isArray(emp.memos) && emp.memos.length > 0 && (
+                          <span> • {emp.memos.length} memo{emp.memos.length > 1 ? 's' : ''}</span>
+                        )}
+                      </div>
                     </li>
                   ))
                 )}
@@ -298,11 +232,10 @@ export default function MemoPage({ employee, onBack, embeddedInShell = false }) 
 
             {/* Memo Editor */}
             <div>
-              {selectedAppraisalId ? (
+              {selectedEmployeeId ? (
                 <>
-                  {loadingAppraisal && <div className={styles.loading}>Loading selected staff memo data…</div>}
                   <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem', color: '#1e293b' }}>
-                    Memos: {selectedAppraisal?.employee_name}
+                    Memos: {selectedEmployee?.name}
                   </h3>
 
                   {/* Memo Form */}
@@ -380,9 +313,9 @@ export default function MemoPage({ employee, onBack, embeddedInShell = false }) 
                     </div>
                   ) : (
                     <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      {memos.map((memo, index) => (
+                      {memos.map((memo) => (
                         <li
-                          key={index}
+                          key={memo.id}
                           style={{
                             border: '1px solid #e2e8f0',
                             borderRadius: 8,
@@ -390,7 +323,7 @@ export default function MemoPage({ employee, onBack, embeddedInShell = false }) 
                             background: '#fff',
                           }}
                         >
-                          {editingMemoIndex === index ? (
+                          {editingMemoId === memo.id ? (
                             <>
                               <textarea
                                 value={editReason}
@@ -465,15 +398,18 @@ export default function MemoPage({ employee, onBack, embeddedInShell = false }) 
                           ) : (
                             <>
                               <div style={{ marginBottom: '0.5rem' }}>
-                                <strong style={{ color: '#1e293b' }}>{memo.reason}</strong>
+                                <strong style={{ color: '#1e293b' }}>{memo.memo}</strong>
                               </div>
                               <div style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '0.75rem' }}>
                                 Deduction: <span style={{ color: '#dc2626', fontWeight: 600 }}>{memo.deduction}</span> marks
+                                {memo.created_by_name && (
+                                  <span> • Added by {memo.created_by_name}</span>
+                                )}
                               </div>
                               <div style={{ display: 'flex', gap: '0.5rem' }}>
                                 <button
-                                  onClick={() => handleEditMemo(index)}
-                                  disabled={saving || editingMemoIndex !== null}
+                                  onClick={() => handleEditMemo(memo)}
+                                  disabled={saving || editingMemoId !== null}
                                   style={{
                                     flex: 1,
                                     padding: '6px 10px',
@@ -482,15 +418,15 @@ export default function MemoPage({ employee, onBack, embeddedInShell = false }) 
                                     border: 'none',
                                     borderRadius: '6px',
                                     fontSize: '0.85rem',
-                                    cursor: saving || editingMemoIndex !== null ? 'not-allowed' : 'pointer',
-                                    opacity: saving || editingMemoIndex !== null ? 0.6 : 1,
+                                    cursor: saving || editingMemoId !== null ? 'not-allowed' : 'pointer',
+                                    opacity: saving || editingMemoId !== null ? 0.6 : 1,
                                   }}
                                 >
                                   Edit
                                 </button>
                                 <button
-                                  onClick={() => handleDeleteMemo(index)}
-                                  disabled={saving || editingMemoIndex !== null}
+                                  onClick={() => handleDeleteMemo(memo)}
+                                  disabled={saving || editingMemoId !== null}
                                   style={{
                                     flex: 1,
                                     padding: '6px 10px',
@@ -499,8 +435,8 @@ export default function MemoPage({ employee, onBack, embeddedInShell = false }) 
                                     border: 'none',
                                     borderRadius: '6px',
                                     fontSize: '0.85rem',
-                                    cursor: saving || editingMemoIndex !== null ? 'not-allowed' : 'pointer',
-                                    opacity: saving || editingMemoIndex !== null ? 0.6 : 1,
+                                    cursor: saving || editingMemoId !== null ? 'not-allowed' : 'pointer',
+                                    opacity: saving || editingMemoId !== null ? 0.6 : 1,
                                   }}
                                 >
                                   Delete

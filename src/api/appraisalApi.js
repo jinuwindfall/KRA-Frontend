@@ -293,3 +293,49 @@ export async function getDepartmentManagers(departmentId) {
   });
   return handle(res);
 }
+
+// ── Staff Memos ──
+
+export async function getEmployeeMemosGrouped() {
+  const res = await fetch(`${BASE}/employees/api/employees/memos/`, {
+    headers: authTokenHeaders(),
+  });
+  return handle(res);
+}
+
+export async function getEmployeeMemos(employeeId) {
+  const res = await fetch(`${BASE}/employees/api/employees/${employeeId}/memos/`, {
+    headers: authTokenHeaders(),
+  });
+  return handle(res);
+}
+
+export async function createEmployeeMemo(employeeId, memo, deduction) {
+  const res = await fetch(`${BASE}/employees/api/employees/${employeeId}/memos/`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ memo, deduction }),
+  });
+  return handle(res);
+}
+
+export async function updateEmployeeMemo(employeeId, memoId, data) {
+  const res = await fetch(`${BASE}/employees/api/employees/${employeeId}/memos/${memoId}/`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(data),
+  });
+  return handle(res);
+}
+
+export async function deleteEmployeeMemo(employeeId, memoId) {
+  const res = await fetch(`${BASE}/employees/api/employees/${employeeId}/memos/${memoId}/`, {
+    method: 'DELETE',
+    headers: authTokenHeaders(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || err.error || `Request failed (${res.status})`);
+  }
+  return true;
+}

@@ -240,8 +240,8 @@ export function getOverallPerformance(appraisal = {}, marks = {}) {
   const weightedPart2 = competenciesMetrics.weighted + behaviourMetrics.weighted;
   const totalRating = weightedPart1 + weightedPart2;
   const { bands } = getRatingSettings(appraisal);
-  // Use the per-employee total memo deduction saved in extra_appraiser_data by MemoPage.
-  const memoPenalty = Math.max(0, toNumber(appraisal?.extra_appraiser_data?.memo_total_deduction));
+  // Computed server-side from the employee's EmployeeMemo records (see AppraisalDisplayMixin).
+  const memoPenalty = Math.max(0, toNumber(appraisal?.memo_total_deduction));
   const netRating = Math.max(0, totalRating - memoPenalty);
 
   return {
