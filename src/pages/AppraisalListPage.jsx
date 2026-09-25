@@ -6,8 +6,8 @@ import styles from './AppraisalListPage.module.css';
 
 const BADGE_CLASS = {
   Draft: styles.badgeDraft,
-  Submitted: styles.badgeSubmitted,
-  'Appraiser Reviewed': styles.badgeAppraiserReviewed,
+  'Employee Submitted': styles.badgeSubmitted,
+  'Appraiser Submitted': styles.badgeAppraiserReviewed,
   Reviewed: styles.badgeReviewed,
 };
 

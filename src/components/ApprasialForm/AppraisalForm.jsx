@@ -11,6 +11,16 @@ import { getAppraisal, patchAppraisal, patchKRA } from "../../api/appraisalApi";
 import { normalizeFrameConfig } from "../../utils/frameConfig";
 import styles from "./AppraisalForm.module.css";
 
+// Marking order: HR frames -> Staff (appraisee) -> Appraiser -> Reviewer.
+// (The appraiser's KRA content - title/description, added via the "Add Content" button
+// on the list page - is separate from this pipeline and isn't gated by status at all.)
+const STATUS_ORDER = ["Draft", "Employee Submitted", "Appraiser Submitted", "Reviewed"];
+const ROLE_TURN_STATUS = {
+  staff: "Draft",
+  appraiser: "Employee Submitted",
+  reviewer: "Appraiser Submitted",
+};
+
 function buildMarksState(kras) {
   const state = {};
   kras.forEach((k) => {
@@ -101,11 +111,14 @@ const AppraisalForm = ({ appraisalId, employee, onBack, viewAsRole }) => {
   // Mark visibility is controlled by HR toggle (plus always visible for HR).
   const canViewMarks = role === "hr" || markAccessOpen;
 
-  // Whether the current role has already submitted
-  const alreadySubmitted =
-    (role === "staff" && appraisalStatus !== "Draft") ||
-    (role === "appraiser" && ["Appraiser Reviewed", "Reviewed"].includes(appraisalStatus)) ||
-    (role === "reviewer" && appraisalStatus === "Reviewed");
+  // Marking order: HR frames (Draft) -> Staff -> Appraiser -> Reviewer -> done (Reviewed).
+  const statusIndex = STATUS_ORDER.indexOf(appraisalStatus);
+  const myTurnIndex = STATUS_ORDER.indexOf(ROLE_TURN_STATUS[role]);
+
+  // Whether an earlier role hasn't submitted yet, so it isn't this role's turn
+  const notYetTurn = role !== "hr" && myTurnIndex !== -1 && statusIndex < myTurnIndex;
+  // Whether the current role has already submitted (or their step was skipped)
+  const alreadySubmitted = role !== "hr" && myTurnIndex !== -1 && statusIndex > myTurnIndex;
   const steps = useMemo(() => {
     const configuredSteps = ["Employee Info"];
 
@@ -123,8 +136,8 @@ const AppraisalForm = ({ appraisalId, employee, onBack, viewAsRole }) => {
     configuredSteps.push("Index");
     return configuredSteps;
   }, [frameConfig, role]);
-  // canEditMarks: HR toggle controls access for all roles, except users who already submitted.
-  const canEditMarks = markAccessOpen && !alreadySubmitted;
+  // canEditMarks: HR toggle controls access, gated by whether it's actually this role's turn.
+  const canEditMarks = markAccessOpen && !notYetTurn && !alreadySubmitted;
 
   useEffect(() => {
     setCurrentStep((prev) => Math.min(prev, Math.max(steps.length - 1, 0)));
@@ -172,14 +185,14 @@ const AppraisalForm = ({ appraisalId, employee, onBack, viewAsRole }) => {
     if (role === "staff") {
       return {
         employee_remarks: remarks.employee_remarks,
-        ...(withStatus ? { status: "Submitted" } : {}),
+        ...(withStatus ? { status: "Employee Submitted" } : {}),
       };
     }
     if (role === "appraiser") {
       return {
         appraiser_remarks: remarks.appraiser_remarks,
         ...extras,
-        ...(withStatus ? { status: "Appraiser Reviewed" } : {}),
+        ...(withStatus ? { status: "Appraiser Submitted" } : {}),
       };
     }
     if (role === "reviewer") {
@@ -343,6 +356,12 @@ const AppraisalForm = ({ appraisalId, employee, onBack, viewAsRole }) => {
             </div>
           )}
 
+          {canViewMarks && notYetTurn && role !== "hr" && (
+            <div style={{ background: '#fef3c7', border: '1px solid #f59e0b', borderRadius: 8, padding: '10px 16px', marginBottom: 12, fontSize: '0.9rem', color: '#92400e', fontWeight: 500 }}>
+              ⏳ Waiting for the previous stage to be completed before you can enter your ratings.
+            </div>
+          )}
+
           {alreadySubmitted && role !== "hr" && (
             <div style={{ background: '#d1fae5', border: '1px solid #10b981', borderRadius: 8, padding: '10px 16px', marginBottom: 12, fontSize: '0.9rem', color: '#065f46', fontWeight: 500 }}>
               ✅ You have submitted this appraisal. No further edits are allowed.
@@ -443,7 +462,7 @@ const AppraisalForm = ({ appraisalId, employee, onBack, viewAsRole }) => {
               appraisal={appraisal}
               marks={marks}
               onBack={autoSaveAndGoBack}
-              onSubmit={!alreadySubmitted ? handleSubmit : undefined}
+              onSubmit={!alreadySubmitted && !notYetTurn ? handleSubmit : undefined}
               markAccessOpen={markAccessOpen}
               isLast
             />
