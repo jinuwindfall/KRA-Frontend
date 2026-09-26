@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createKRA, deleteKRA, getAllAppraisals, getDepartments, getMyAppraisals, patchAppraisal, patchKRA } from '../api/appraisalApi';
 import { APPRAISAL_TYPE_OPTIONS, APPRAISER_FIELD_OPTIONS, DEFAULT_FRAME_CONFIG, FRAME_STEP_OPTIONS, normalizeFrameConfig } from '../utils/frameConfig';
 import { getFinalMark, getOverallPerformance } from '../utils/ratingUtils';
+import { pickActiveAppraisal } from '../utils/appraisalSelection';
 import styles from './AppraisalListPage.module.css';
 
 const BADGE_CLASS = {
@@ -1153,16 +1154,9 @@ export default function AppraisalListPage({
 
   const handleOpenLatestMyKra = () => {
     getMyAppraisals().then((list) => {
-      if (list.length > 0) {
-        const latest = [...list].sort((a, b) => {
-          const aPeriod = a?.period_to ? new Date(a.period_to).getTime() : 0;
-          const bPeriod = b?.period_to ? new Date(b.period_to).getTime() : 0;
-          if (bPeriod !== aPeriod) return bPeriod - aPeriod;
-          const aUpdated = a?.updated_at ? new Date(a.updated_at).getTime() : 0;
-          const bUpdated = b?.updated_at ? new Date(b.updated_at).getTime() : 0;
-          return bUpdated - aUpdated;
-        })[0];
-        onOpenMyKra(latest.id);
+      const active = pickActiveAppraisal(list);
+      if (active?.id) {
+        onOpenMyKra(active.id);
       } else {
         alert('No appraisal assigned to you yet.');
       }

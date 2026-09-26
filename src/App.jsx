@@ -11,6 +11,7 @@ import MemoPage from "./pages/MemoPage";
 import AppraisalForm from "./components/ApprasialForm/AppraisalForm";
 import HRShell from "./components/HRShell";
 import { getMyAppraisals } from "./api/appraisalApi";
+import { pickActiveAppraisal } from "./utils/appraisalSelection";
 
 const HR_PAGE_CONTENT = {
   structure: {
@@ -75,21 +76,10 @@ function App() {
 
     getMyAppraisals()
       .then((list) => {
-        if (list.length > 0) {
-          const latest = [...list].sort((a, b) => {
-            const aPeriod = a?.period_to ? new Date(a.period_to).getTime() : 0;
-            const bPeriod = b?.period_to ? new Date(b.period_to).getTime() : 0;
-            if (bPeriod !== aPeriod) return bPeriod - aPeriod;
-
-            const aUpdated = a?.updated_at ? new Date(a.updated_at).getTime() : 0;
-            const bUpdated = b?.updated_at ? new Date(b.updated_at).getTime() : 0;
-            return bUpdated - aUpdated;
-          })[0];
-
-          if (latest?.id) {
-            setMyAppraisalId(latest.id);
-            return;
-          }
+        const active = pickActiveAppraisal(list);
+        if (active?.id) {
+          setMyAppraisalId(active.id);
+          return;
         }
 
         alert("No appraisal assigned to you yet.");
@@ -104,8 +94,9 @@ function App() {
       setStaffError("");
       getMyAppraisals()
         .then((list) => {
-          if (list.length > 0) {
-            setSelectedAppraisalId(list[0].id);
+          const active = pickActiveAppraisal(list);
+          if (active?.id) {
+            setSelectedAppraisalId(active.id);
           } else {
             setStaffError("No appraisal assigned to you yet.");
           }
@@ -162,11 +153,10 @@ function App() {
           <button
             onClick={() => {
               setStaffLoading(true);
-              import("./api/appraisalApi").then(({ getMyAppraisals }) => {
-                getMyAppraisals().then(list => {
-                  if (list.length > 0) setSelectedAppraisalId(list[0].id);
-                }).finally(() => setStaffLoading(false));
-              });
+              getMyAppraisals().then((list) => {
+                const active = pickActiveAppraisal(list);
+                if (active?.id) setSelectedAppraisalId(active.id);
+              }).finally(() => setStaffLoading(false));
             }}
             style={{ padding: "10px 24px", borderRadius: "6px", background: "#2563eb", color: "#fff", border: "none", cursor: "pointer", fontWeight: 600, fontSize: "0.95rem" }}
           >
